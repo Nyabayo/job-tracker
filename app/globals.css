@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+/*
+ * Job Tracker design tokens (spec section 4).
+ * Colours are CSS variables so dark mode only swaps values. Every pairing of
+ * text on background used in the app meets WCAG 2.1 AA (4.5:1).
+ */
+
+:root {
+  --ink: #1b1d29;
+  --ground: #f7f6f2;
+  --surface: #ffffff;
+  --border: #e2e0d8;
+  --text: #1b1d29;
+  --text-secondary: #4e5163;
+
+  --primary: #3d3bd4;
+  --primary-hover: #2a28a8;
+  --primary-soft: #e7e6fb;
+  --on-primary: #ffffff;
+
+  --accent: #f2b54a;
+  --accent-soft: #fcefd3;
+  --on-accent: #1b1d29;
+
+  --success: #1f7a4d;
+  --success-soft: #ddf3e8;
+  --danger: #b4443a;
+  --danger-soft: #fbe7e4;
+
+  --stage-wishlist: #8a8fa3;
+  --stage-applied: #3d3bd4;
+  --stage-interview: #f2b54a;
+  --stage-offer: #1f7a4d;
+  --stage-rejected: #b4443a;
+
+  --focus: #3d3bd4;
+  /* Dark ink panels with amber headings stay dark in both themes. */
+  --panel: #1b1d29;
+  --on-panel: #f7f6f2;
+  color-scheme: light;
+}
+
+/* Dark theme. "System" follows the device until A9 adds a manual choice. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #f7f6f2;
+    --ground: #12131b;
+    --surface: #1b1d29;
+    --border: #2c2f40;
+    --text: #f7f6f2;
+    --text-secondary: #a9abb8;
+    --primary: #8a88f0;
+    --primary-hover: #a9a7f5;
+    --primary-soft: #2a2a5c;
+    --on-primary: #12131b;
+    --accent: #f2b54a;
+    --accent-soft: #3d3220;
+    --success: #5cc795;
+    --success-soft: #173a2a;
+    --danger: #f08a80;
+    --danger-soft: #42201d;
+    --focus: #a9a7f5;
+    --panel: #2c2f40;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #f7f6f2;
+  --ground: #12131b;
+  --surface: #1b1d29;
+  --border: #2c2f40;
+  --text: #f7f6f2;
+  --text-secondary: #a9abb8;
+  --primary: #8a88f0;
+  --primary-hover: #a9a7f5;
+  --primary-soft: #2a2a5c;
+  --on-primary: #12131b;
+  --accent: #f2b54a;
+  --accent-soft: #3d3220;
+  --success: #5cc795;
+  --success-soft: #173a2a;
+  --danger: #f08a80;
+  --danger-soft: #42201d;
+  --focus: #a9a7f5;
+  --panel: #2c2f40;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-on-panel: var(--on-panel);
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-secondary: var(--text-secondary);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-stage-wishlist: var(--stage-wishlist);
+  --color-stage-applied: var(--stage-applied);
+  --color-stage-interview: var(--stage-interview);
+  --color-stage-offer: var(--stage-offer);
+  --color-stage-rejected: var(--stage-rejected);
+
+  --font-heading: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale: 12, 14, 15 (body), 18, 22, 28, 36, 48 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+
+  /* Breakpoints: phone < 600px, tablet 600 to 1023px, desktop 1024px+, ultrawide 2560px+ */
+  --breakpoint-tab: 37.5rem;
+  --breakpoint-ultra: 160rem;
+
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-panel: 16px;
+  --radius-chip: 999px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility px-safe {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
