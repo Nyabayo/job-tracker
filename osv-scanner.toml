@@ -1,0 +1,6 @@
+# OSV-Scanner exceptions. Every entry needs a reason and an expiry date.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-31
+reason = "braces (all versions, no fix yet) is only pulled in by ESLint tooling via eslint-config-next; it never ships in the app or processes user input."
