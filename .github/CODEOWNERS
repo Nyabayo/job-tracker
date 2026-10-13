@@ -1,0 +1,16 @@
+# Changes to CI/CD, security tooling and the database security model need
+# the maintainer's review.
+/.github/                @Nyabayo
+/.zap/                   @Nyabayo
+/osv-scanner.toml        @Nyabayo
+/SECURITY.md             @Nyabayo
+/docs/SECURITY_PIPELINE.md @Nyabayo
+/Dockerfile              @Nyabayo
+/docker-compose.yml      @Nyabayo
+/docker/                 @Nyabayo
+/prisma/rls.sql          @Nyabayo
+/prisma/roles.sql        @Nyabayo
+/proxy.ts                @Nyabayo
+/lib/security/           @Nyabayo
+/lib/db/                 @Nyabayo
+/lib/auth/               @Nyabayo
