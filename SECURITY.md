@@ -29,9 +29,9 @@ Job Tracker is built against the OWASP Top 10 (2021) and OWASP ASVS Level 2. The
 | A03 Injection | Prisma parameterised queries only; zod validation on every server action; strict CSP with a per-request nonce; HTML in emails is escaped. |
 | A04 Insecure design | Threat-model notes in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); separate database roles for migrations, the app and login; account deletion is a two-step purge. |
 | A05 Security misconfiguration | Strict security headers, no `X-Powered-By`, non-root read-only container with all capabilities dropped, secrets only from environment, startup env validation. |
-| A06 Vulnerable components | Exact-pinned dependencies, Dependabot, OSV-Scanner, Dependency Review, Trivy, and SHA-pinned GitHub Actions. |
+| A06 Vulnerable components | Exact-pinned dependencies, Dependabot, OSV-Scanner, npm audit with registry signature checks, Dependency Review, Trivy, and SHA-pinned GitHub Actions checked by zizmor. |
 | A07 Identification and authentication failures | Generic login errors, timing-equalised password checks, rate limits and progressive lockout, verified email, single-use 30-minute reset links, session rotation on login and revocation on password reset. |
-| A08 Software and data integrity failures | CSRF protection (Origin check plus double-submit token), lockfile installs, signed commits required on `main`, CodeQL and Semgrep on every PR. |
+| A08 Software and data integrity failures | CSRF protection (Origin check plus double-submit token), lockfile installs, signed commits required on `main`, CodeQL and Semgrep (including this project's own rules in `.semgrep/`) on every PR. |
 | A09 Logging and monitoring failures | Append-only audit log of logins, failures, lockouts, resets, access denials and deletions; IPs are truncated. |
 | A10 Server-side request forgery | The server never fetches user-supplied URLs; Nodemailer file and URL access are disabled. |
 

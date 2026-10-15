@@ -1,13 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { authDb } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { clientInfo } from "@/lib/request";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { generateToken, hashToken, isExpired, PASSWORD_RESET_TTL_MS, VERIFY_EMAIL_TTL_MS } from "@/lib/auth/tokens";
 import { endAllSessions, endSession, startSession } from "@/lib/auth/session";
-import { clearLoginFailures, loginLockRemaining, recordLoginFailure, takeToken } from "@/lib/rate-limit";
+import { clearLoginFailures, loginLockRemaining, recordLoginFailure, takeIpToken, takeToken } from "@/lib/rate-limit";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 import { invalid, safeNextPath, type ActionResult } from "@/lib/action-result";
 import { CSRF_FAILED, csrfValid } from "@/lib/security/csrf";
@@ -23,6 +24,14 @@ import {
 const TOO_MANY = "Too many attempts. Please wait a few minutes and try again.";
 const BAD_LOGIN = "That email and password don't match an account. Check them and try again.";
 
+/**
+ * Sends email after the response is finished, so the response time doesn't
+ * reveal whether an email went out (and so whether the account exists).
+ */
+function sendLater(send: () => Promise<void>): void {
+  after(() => send().catch((err: unknown) => console.error("[email]", err)));
+}
+
 async function issueVerificationToken(email: string): Promise<void> {
   const token = generateToken();
   await authDb().verificationToken.deleteMany({ where: { identifier: email } });
@@ -30,7 +39,7 @@ async function issueVerificationToken(email: string): Promise<void> {
     data: { identifier: email, token: hashToken(token), expires: new Date(Date.now() + VERIFY_EMAIL_TTL_MS) },
     select: { token: true },
   });
-  await sendVerificationEmail(email, token);
+  sendLater(() => sendVerificationEmail(email, token));
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +52,7 @@ export async function signUpAction(input: unknown): Promise<ActionResult> {
   const { email, password, name } = parsed.data;
 
   const { rawIp } = await clientInfo();
-  if (!(await takeToken("signupPerIp", rawIp))) return { ok: false, message: TOO_MANY };
+  if (!(await takeIpToken("signupPerIp", rawIp))) return { ok: false, message: TOO_MANY };
 
   // Hash first so the response takes the same time whether or not the email exists.
   const passwordHash = await hashPassword(password);
@@ -57,7 +66,15 @@ export async function signUpAction(input: unknown): Promise<ActionResult> {
     await audit({ event: "SIGNUP", userId: user.id });
     await issueVerificationToken(email);
   } else if (!existing.emailVerified && !existing.deletedAt && (await takeToken("verifyPerEmail", email))) {
-    // Someone signing up again before confirming: send a fresh link.
+    // Someone signing up again before confirming: the newest sign-up's
+    // password is the one the emailed link confirms. Otherwise whoever
+    // registered the address first (perhaps not its owner) would keep a
+    // password on the account the real owner then verifies.
+    await authDb().user.update({
+      where: { id: existing.id },
+      data: { passwordHash, name: name || null },
+      select: { id: true },
+    });
     await issueVerificationToken(email);
   }
   // Same answer either way, so sign-up can't be used to discover accounts.
@@ -74,7 +91,7 @@ export async function loginAction(input: unknown, next?: unknown): Promise<Actio
   const { email, password } = parsed.data;
 
   const { rawIp } = await clientInfo();
-  if (!(await takeToken("loginPerIp", rawIp))) return { ok: false, message: TOO_MANY };
+  if (!(await takeIpToken("loginPerIp", rawIp))) return { ok: false, message: TOO_MANY };
 
   const locked = await loginLockRemaining(email);
   if (locked > 0) {
@@ -162,7 +179,7 @@ export async function forgotPasswordAction(input: unknown): Promise<ActionResult
   const { email } = parsed.data;
 
   const { rawIp } = await clientInfo();
-  const allowed = (await takeToken("resetPerIp", rawIp)) && (await takeToken("resetPerEmail", email));
+  const allowed = (await takeIpToken("resetPerIp", rawIp)) && (await takeToken("resetPerEmail", email));
 
   if (allowed) {
     const user = await authDb().user.findUnique({ where: { email }, select: { id: true, deletedAt: true } });
@@ -177,7 +194,7 @@ export async function forgotPasswordAction(input: unknown): Promise<ActionResult
         }),
       ]);
       await audit({ event: "PASSWORD_RESET_REQUESTED", userId: user.id });
-      await sendPasswordResetEmail(email, token);
+      sendLater(() => sendPasswordResetEmail(email, token));
     }
   }
   redirect("/check-email?for=reset");
