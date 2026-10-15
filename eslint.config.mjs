@@ -36,5 +36,5 @@ export default defineConfig([
     files: ["tests/**"],
     rules: { "security/detect-object-injection": "off", "security/detect-non-literal-fs-filename": "off" },
   },
-  globalIgnores([".next/**", "lib/generated/**", "node_modules/**", "coverage/**", "playwright-report/**", "test-results/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", ".semgrep/**", "lib/generated/**", "node_modules/**", "coverage/**", "playwright-report/**", "test-results/**", "next-env.d.ts"]),
 ]);

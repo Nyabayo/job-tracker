@@ -7,7 +7,8 @@ on:
   schedule:
     - cron: "11 5 * * 1" # weekly
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   zap:

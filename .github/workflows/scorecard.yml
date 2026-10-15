@@ -7,6 +7,8 @@ on:
   schedule:
     - cron: "37 6 * * 1" # weekly
 
+# Scorecard's own docs require read-all here: some checks read settings
+# that no narrower scope covers. Nothing can write.
 permissions: read-all
 
 jobs:

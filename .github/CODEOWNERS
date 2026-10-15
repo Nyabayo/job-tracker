@@ -2,6 +2,7 @@
 # the maintainer's review.
 /.github/                @Nyabayo
 /.zap/                   @Nyabayo
+/.semgrep/               @Nyabayo
 /osv-scanner.toml        @Nyabayo
 /SECURITY.md             @Nyabayo
 /docs/SECURITY_PIPELINE.md @Nyabayo
