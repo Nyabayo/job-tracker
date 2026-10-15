@@ -25,3 +25,13 @@ export function truncateIp(raw: string | null | undefined): string | null {
   }
   return null;
 }
+
+/**
+ * The client IP from X-Forwarded-For. Takes the LAST entry: that is the one
+ * the trusted reverse proxy appended. Earlier entries come from the client and
+ * can be forged to dodge rate limits.
+ */
+export function forwardedClientIp(header: string | null | undefined): string | null {
+  const last = header?.split(",").at(-1)?.trim();
+  return last && isIP(last) ? last : null;
+}

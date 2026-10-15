@@ -42,7 +42,7 @@ All images are pinned to exact versions and digests, and Dependabot proposes upd
    TRUST_PROXY=true
    ```
 
-   `https://` turns on Secure cookies and HSTS. Only set `TRUST_PROXY=true` when your proxy sets `X-Forwarded-For`; otherwise anyone could fake their IP and dodge rate limits.
+   `https://` turns on Secure cookies and HSTS. Only set `TRUST_PROXY=true` when exactly one proxy you control sits in front of the app and appends the client address to `X-Forwarded-For` (Caddy and nginx's `$proxy_add_x_forwarded_for` both do). The app reads the last entry, the one your proxy added; otherwise anyone could fake their IP and dodge rate limits. With `TRUST_PROXY=false` the per-IP limits on sign-up and password reset become one shared limit for the whole site, and login relies on per-account lockout only.
 
 3. **Real email.** Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` for your mail provider, then remove the `mailpit` service.
 

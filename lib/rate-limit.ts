@@ -29,6 +29,11 @@ function createLimiters() {
     loginFailures: limiter(pool, "login_fail", 1000, 24 * 60 * 60),
     loginLock: limiter(pool, "login_lock", 1, 60 * 60),
     signupPerIp: limiter(pool, "signup_ip", 10, 60 * 60),
+    // Used instead of the per-IP limits above when the client IP is unknown
+    // (TRUST_PROXY off): one bucket for the whole instance, so sign-up and
+    // reset emails stay capped instead of becoming unlimited.
+    signupAnyIp: limiter(pool, "signup_any_ip", 100, 60 * 60),
+    resetAnyIp: limiter(pool, "reset_any_ip", 100, 60 * 60),
     resetPerEmail: limiter(pool, "reset_email", 3, 60 * 60),
     resetPerIp: limiter(pool, "reset_ip", 10, 60 * 60),
     verifyPerEmail: limiter(pool, "verify_email", 3, 60 * 60),
@@ -41,11 +46,20 @@ function limits(): Limiters {
   return globalForLimits.jobTrackerLimits;
 }
 
-export type LimitName = Exclude<keyof Limiters, "loginFailures" | "loginLock">;
+/** Limits keyed by something every request has: an email or a user id. */
+export type LimitName = "verifyPerEmail" | "resetPerEmail" | "deletePerUser";
+/** Limits keyed by the client IP, which is only known when TRUST_PROXY is on. */
+export type IpLimitName = "loginPerIp" | "signupPerIp" | "resetPerIp";
 
-/** Consumes one point. Returns false when the caller is over the limit. */
-export async function takeToken(name: LimitName, key: string | null): Promise<boolean> {
-  if (!key) return true;
+// Login has no instance-wide fallback on purpose: one shared bucket would let
+// anyone lock every user out. Per-email lockout still applies.
+const ANY_IP_FALLBACK = {
+  loginPerIp: null,
+  signupPerIp: "signupAnyIp",
+  resetPerIp: "resetAnyIp",
+} as const satisfies Record<IpLimitName, keyof Limiters | null>;
+
+async function consume(name: keyof Limiters, key: string): Promise<boolean> {
   try {
     // eslint-disable-next-line security/detect-object-injection -- `name` is a typed union key
     await limits()[name].consume(key);
@@ -54,6 +68,22 @@ export async function takeToken(name: LimitName, key: string | null): Promise<bo
     if (err instanceof RateLimiterRes) return false;
     throw err;
   }
+}
+
+/** Consumes one point. Returns false when the caller is over the limit. */
+export async function takeToken(name: LimitName, key: string): Promise<boolean> {
+  return consume(name, key);
+}
+
+/**
+ * Per-IP limit. Without a trusted client IP it falls back to the
+ * instance-wide bucket rather than letting every request through.
+ */
+export async function takeIpToken(name: IpLimitName, ip: string | null): Promise<boolean> {
+  if (ip) return consume(name, ip);
+  // eslint-disable-next-line security/detect-object-injection -- `name` is a typed union key
+  const fallback = ANY_IP_FALLBACK[name];
+  return fallback ? consume(fallback, "all") : true;
 }
 
 /** Seconds left on a login lock for this email, or 0. */
