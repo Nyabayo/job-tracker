@@ -1,5 +1,0 @@
-rules:
-  excessive-permissions:
-    ignore:
-      # Scorecard needs read-all (see the comment in the workflow).
-      - scorecard.yml

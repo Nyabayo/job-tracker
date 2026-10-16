@@ -63,7 +63,7 @@ For local development outside Docker, set `DATABASE_URL_OWNER`, `DATABASE_URL` a
 
 ## Security
 
-Built against the OWASP Top 10 and ASVS Level 2. Every pull request runs CodeQL, Semgrep, Gitleaks, OSV-Scanner, Dependency Review, Trivy, Hadolint and an OWASP ZAP baseline scan. Details: [docs/SECURITY_PIPELINE.md](docs/SECURITY_PIPELINE.md).
+Built against the OWASP Top 10 and ASVS Level 2. Git hooks run Semgrep, Gitleaks, npm audit, OSV-Scanner, Trivy and Hadolint locally before every commit and push, with no paid CI needed; an OWASP ZAP baseline scan is one command away. Details: [docs/SECURITY_PIPELINE.md](docs/SECURITY_PIPELINE.md).
 
 Found a vulnerability? Please report it privately; see [SECURITY.md](SECURITY.md).
 

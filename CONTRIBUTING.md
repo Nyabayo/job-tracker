@@ -24,7 +24,7 @@ Follow **Develop** in the [README](README.md). Node 22 (see `.nvmrc`) and Docker
    npm run lint && npm run typecheck && npm run test:unit && npm run test:integration
    ```
 
-5. Open a pull request. CI runs lint, type checks, unit, integration and end-to-end tests, an accessibility check, and the security scans in [docs/SECURITY_PIPELINE.md](docs/SECURITY_PIPELINE.md). All must pass before merging.
+5. Before you push, the pre-push hook runs `npm run verify`: lint, type checks, unit tests and the security scans in [docs/SECURITY_PIPELINE.md](docs/SECURITY_PIPELINE.md). All must pass. Run `npm run test:integration` and `npm run test:e2e` too when you touch data access or pages.
 
 ## Rules for code
 
