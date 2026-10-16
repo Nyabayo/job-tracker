@@ -1,4 +1,4 @@
-import { Archive, SquareCheck, ChartColumn, Ellipsis, SquareKanban, Settings, type LucideIcon } from "lucide-react";
+import { Archive, Bell, SquareCheck, ChartColumn, Ellipsis, SquareKanban, Settings, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -9,7 +9,10 @@ export const primaryNav: NavItem[] = [
   { href: "/archive", label: "Archive", icon: Archive },
 ];
 
-export const secondaryNav: NavItem[] = [{ href: "/settings", label: "Settings", icon: Settings }];
+export const secondaryNav: NavItem[] = [
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
 
 /** Phones: four tabs at the bottom (section 5). */
 export const bottomTabs: NavItem[] = [

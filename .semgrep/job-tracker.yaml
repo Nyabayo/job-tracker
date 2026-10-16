@@ -139,3 +139,24 @@ rules:
           async function $F(..., $KEY: string | null, ...) { ... }
       - pattern: |
           if (!$KEY) return true;
+
+  - id: server-fetch-outside-ssrf-guard
+    message: >-
+      Server code must fetch user-supplied URLs only through safeFetch() in
+      lib/fetcher, which blocks private, loopback and metadata addresses,
+      re-checks every redirect and caps time and size.
+    severity: ERROR
+    languages: [typescript]
+    metadata:
+      category: security
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+      owasp: "A10:2021 - Server-Side Request Forgery"
+    paths:
+      include: ["app/**", "lib/**", ".semgrep/job-tracker.tsx"]
+      exclude: ["lib/fetcher/**", "components/**"]
+    pattern-either:
+      - pattern: fetch(...)
+      - pattern: http.request(...)
+      - pattern: https.request(...)
+      - pattern: http.get(...)
+      - pattern: https.get(...)

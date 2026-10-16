@@ -1,7 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "@/lib/env";
-import { escapeHtml } from "@/lib/html";
+import { escapeHtml } from "@/lib/html/escape";
 
 const globalForMail = globalThis as unknown as { jobTrackerMail?: Transporter };
 
@@ -23,6 +23,8 @@ type ActionEmail = { to: string; subject: string; intro: string; actionLabel: st
 
 function render({ intro, actionLabel, actionUrl, outro }: ActionEmail): { text: string; html: string } {
   const text = `${intro}\n\n${actionLabel}: ${actionUrl}\n\n${outro}\n\nJob Tracker`;
+  // Every interpolated value goes through escapeHtml.
+  // nosemgrep: html-in-template-string
   const html = `<!doctype html><html><body style="margin:0;background:#F7F6F2;font-family:Arial,sans-serif;color:#1B1D29">
 <div style="max-width:520px;margin:0 auto;padding:32px 24px;background:#FFFFFF;border:1px solid #E2E0D8;border-radius:14px">
 <p style="font-size:15px;line-height:1.5">${escapeHtml(intro)}</p>
@@ -69,4 +71,16 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
     outro: "If you didn't do this, reply to this email straight away.",
   });
   await transport().sendMail({ from: env().EMAIL_FROM, to, subject: "Your Job Tracker account was deleted", ...body });
+}
+
+/** G6: optional email reminder for a due task, interview or deadline. */
+export async function sendReminderEmail(to: string, title: string, link: string): Promise<void> {
+  await send({
+    to,
+    subject: `Reminder: ${title.replace(/[\r\n]+/g, " ").slice(0, 120)}`,
+    intro: title,
+    actionLabel: "Open Job Tracker",
+    actionUrl: `${env().APP_URL}${link.startsWith("/") ? link : "/tasks"}`,
+    outro: "You get these because email reminders are on. Turn them off any time in Settings.",
+  });
 }

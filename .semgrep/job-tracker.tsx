@@ -107,3 +107,14 @@ async function takeIpToken(name: string, ip: string | null): Promise<boolean> {
   if (ip) return consume(name, ip);
   return consume(name, "all");
 }
+
+// ---- server-fetch-outside-ssrf-guard ----
+async function importPage(url: string) {
+  // ruleid: server-fetch-outside-ssrf-guard
+  const bad = await fetch(url);
+  // ruleid: server-fetch-outside-ssrf-guard
+  https.get(url, () => {});
+  // ok: server-fetch-outside-ssrf-guard
+  const good = await safeFetch(url);
+  return [bad, good];
+}

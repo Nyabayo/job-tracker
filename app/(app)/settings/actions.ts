@@ -14,6 +14,11 @@ import { sendAccountDeletedEmail } from "@/lib/email";
 import { invalid, type ActionResult } from "@/lib/action-result";
 import { deleteAccountSchema } from "@/lib/validation/auth";
 import { CSRF_FAILED, csrfValid } from "@/lib/security/csrf";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { withUser } from "@/lib/db";
+import { formObject } from "@/lib/validation/forms";
+import { CURRENCIES } from "@/lib/board/constants";
 
 /**
  * A7: permanently delete my account.
@@ -47,4 +52,21 @@ export async function deleteAccountAction(input: unknown): Promise<ActionResult>
 
   (await cookies()).delete(sessionCookieName(isSecureUrl()));
   redirect("/goodbye");
+}
+
+const preferencesSchema = z.object({
+  theme: z.enum(["LIGHT", "DARK", "SYSTEM"]),
+  defaultCurrency: z.enum(CURRENCIES),
+  emailReminders: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
+});
+
+/** A9 theme, G6 email reminders, default currency. */
+export async function savePreferencesAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!(await csrfValid(formData))) return CSRF_FAILED;
+  const parsed = preferencesSchema.safeParse(formObject(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  await withUser(user.id, (tx) => tx.user.update({ where: { id: user.id }, data: parsed.data, select: { id: true } }));
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Settings saved." };
 }

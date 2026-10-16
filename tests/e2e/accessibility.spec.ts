@@ -6,7 +6,7 @@ import { logIn, signUpAndVerify, uniqueEmail } from "./helpers";
 // scroll, touch targets of at least 44px, and no serious or critical axe issues.
 const widths = [320, 768, 1440, 2560];
 const publicPages = ["/", "/login", "/signup", "/forgot-password", "/check-email?for=signup", "/privacy"];
-const appPages = ["/board", "/dashboard", "/tasks", "/archive", "/settings", "/more"];
+const appPages = ["/board", "/dashboard", "/tasks", "/archive", "/settings", "/more", "/jobs/new", "/notifications"];
 
 async function checkScreen(page: Page, path: string, width: number): Promise<void> {
   await page.setViewportSize({ width, height: 900 });

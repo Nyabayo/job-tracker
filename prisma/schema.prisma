@@ -302,6 +302,7 @@ model Job {
   descriptionHtml    String?         @map("description_html")
   descriptionSavedAt DateTime?       @map("description_saved_at") @db.Timestamptz(3)
   archivedAt         DateTime?       @map("archived_at") @db.Timestamptz(3)
+  deadlineNotifiedAt DateTime?       @map("deadline_notified_at") @db.Timestamptz(3) // G5
   lastActivityAt     DateTime        @default(now()) @map("last_activity_at") @db.Timestamptz(3)
   createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -482,6 +483,7 @@ model Task {
   dueAt         DateTime?      @map("due_at") @db.Timestamptz(3)
   remindAt      DateTime?      @map("remind_at") @db.Timestamptz(3)
   completedAt   DateTime?      @map("completed_at") @db.Timestamptz(3)
+  remindedAt    DateTime?      @map("reminded_at") @db.Timestamptz(3) // G5: set once the reminder notification exists
   kind          TaskKind       @default(TASK)
   interviewType InterviewType? @map("interview_type")
   notes         String?

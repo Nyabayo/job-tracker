@@ -158,4 +158,73 @@ END $$;
 REVOKE ALL ON FUNCTION row_exists(text, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION row_exists(text, uuid) TO jt_app;
 
+-- ---------------------------------------------------------------------------
+-- G1, G5, G6: due reminders and deadline alerts. The background worker has
+-- no user id, so these SECURITY DEFINER functions do the cross-user work and
+-- nothing else: each claims due rows (so they fire once), writes the in-app
+-- notification for that row's owner, and returns only what the email
+-- reminder needs. Only jt_auth (the worker's "no user yet" role) may call them.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION claim_due_reminders(max_rows integer)
+  RETURNS TABLE (user_id uuid, title text, due_at timestamptz, kind text, link text)
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH due AS (
+    UPDATE tasks t SET reminded_at = now()
+    WHERE t.id IN (
+      SELECT id FROM tasks
+      WHERE remind_at IS NOT NULL AND remind_at <= now() AND reminded_at IS NULL AND completed_at IS NULL
+      ORDER BY remind_at
+      LIMIT least(greatest(max_rows, 1), 1000)
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING t.user_id, t.title::text, t.due_at, t.kind::text,
+      CASE WHEN t.job_id IS NULL THEN '/tasks' ELSE '/jobs/' || t.job_id::text || '?tab=tasks' END AS link
+  ), notified AS (
+    INSERT INTO notifications (user_id, kind, title, body, link)
+    SELECT d.user_id,
+      CASE WHEN d.kind = 'INTERVIEW' THEN 'interview' ELSE 'task_due' END,
+      left(CASE WHEN d.kind = 'INTERVIEW' THEN 'Interview: ' ELSE 'Reminder: ' END || d.title, 200),
+      CASE WHEN d.due_at IS NULL THEN NULL ELSE 'Due ' || to_char(d.due_at AT TIME ZONE 'UTC', 'DD Mon YYYY HH24:MI') || ' UTC' END,
+      d.link
+    FROM due d
+    RETURNING 1
+  )
+  SELECT d.user_id, d.title, d.due_at, d.kind, d.link FROM due d;
+END $$;
+REVOKE ALL ON FUNCTION claim_due_reminders(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION claim_due_reminders(integer) TO jt_auth;
+
+CREATE OR REPLACE FUNCTION claim_deadline_alerts(max_rows integer)
+  RETURNS TABLE (user_id uuid, title text, due_at timestamptz, kind text, link text)
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH due AS (
+    UPDATE jobs j SET deadline_notified_at = now()
+    WHERE j.id IN (
+      SELECT id FROM jobs
+      WHERE deadline IS NOT NULL AND deadline_notified_at IS NULL AND archived_at IS NULL
+        AND deadline <= now() + interval '2 days' AND deadline >= now() - interval '1 day'
+      ORDER BY deadline
+      LIMIT least(greatest(max_rows, 1), 1000)
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING j.user_id, (j.title || ' at ' || j.company_name)::text AS title, j.deadline AS due_at, 'DEADLINE'::text AS kind,
+      '/jobs/' || j.id::text AS link
+  ), notified AS (
+    INSERT INTO notifications (user_id, kind, title, body, link)
+    SELECT d.user_id, 'deadline', left('Deadline soon: ' || d.title, 200),
+      'Applications close ' || to_char(d.due_at AT TIME ZONE 'UTC', 'DD Mon YYYY'), d.link
+    FROM due d
+    RETURNING 1
+  )
+  SELECT d.user_id, d.title, d.due_at, d.kind, d.link FROM due d;
+END $$;
+REVOKE ALL ON FUNCTION claim_deadline_alerts(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION claim_deadline_alerts(integer) TO jt_auth;
+
 COMMIT;

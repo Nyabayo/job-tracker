@@ -7,6 +7,7 @@ import {
   accountsAwaitingPurge,
   purgeAccount,
 } from "@/lib/jobs/account-purge";
+import { REMINDER_QUEUE, runReminders } from "@/lib/jobs/reminders";
 
 // Background jobs run inside the app process on pg-boss, which keeps its
 // queue in Postgres (schema "pgboss"), so self-hosters need no extra service.
@@ -28,6 +29,7 @@ async function createBoss(): Promise<PgBoss> {
   await boss.start();
   await boss.createQueue(ACCOUNT_PURGE_QUEUE, { retryLimit: 10, retryDelay: 60, retryBackoff: true });
   await boss.createQueue(ACCOUNT_PURGE_SWEEP_QUEUE);
+  await boss.createQueue(REMINDER_QUEUE);
   return boss;
 }
 
@@ -55,5 +57,11 @@ export async function startWorkers(): Promise<void> {
   await b.schedule(ACCOUNT_PURGE_SWEEP_QUEUE, "17 * * * *");
   await b.work(ACCOUNT_PURGE_SWEEP_QUEUE, async () => {
     for (const userId of await accountsAwaitingPurge()) await enqueueAccountPurge(userId);
+  });
+
+  // G1, G5, G6: task reminders, interviews and deadlines, every minute.
+  await b.schedule(REMINDER_QUEUE, "* * * * *");
+  await b.work(REMINDER_QUEUE, async () => {
+    await runReminders();
   });
 }

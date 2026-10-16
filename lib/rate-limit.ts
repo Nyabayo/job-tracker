@@ -38,6 +38,9 @@ function createLimiters() {
     resetPerIp: limiter(pool, "reset_ip", 10, 60 * 60),
     verifyPerEmail: limiter(pool, "verify_email", 3, 60 * 60),
     deletePerUser: limiter(pool, "delete_user", 5, 15 * 60),
+    importPerUser: limiter(pool, "import_user", 30, 10 * 60),
+    uploadPerUser: limiter(pool, "upload_user", 60, 60 * 60),
+    exportPerUser: limiter(pool, "export_user", 10, 60 * 60),
   };
 }
 
@@ -47,7 +50,7 @@ function limits(): Limiters {
 }
 
 /** Limits keyed by something every request has: an email or a user id. */
-export type LimitName = "verifyPerEmail" | "resetPerEmail" | "deletePerUser";
+export type LimitName = "verifyPerEmail" | "resetPerEmail" | "deletePerUser" | "importPerUser" | "uploadPerUser" | "exportPerUser";
 /** Limits keyed by the client IP, which is only known when TRUST_PROXY is on. */
 export type IpLimitName = "loginPerIp" | "signupPerIp" | "resetPerIp";
 

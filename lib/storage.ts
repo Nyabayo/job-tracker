@@ -52,3 +52,11 @@ export async function deleteUserFiles(userId: string): Promise<number> {
   } while (token);
   return deleted;
 }
+
+/** Deletes specific objects (for example a deleted job's files). */
+export async function deleteObjects(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  await s3().send(
+    new DeleteObjectsCommand({ Bucket: env().S3_BUCKET, Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true } }),
+  );
+}

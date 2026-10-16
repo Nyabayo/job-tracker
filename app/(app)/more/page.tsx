@@ -5,12 +5,13 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { logoutAction } from "@/app/(auth)/actions";
 import { CsrfInput } from "@/components/security/csrf";
-import { Archive, Settings, ShieldCheck } from "lucide-react";
+import { Archive, Bell, Settings, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = { title: "More" };
 
 const links = [
   { href: "/archive", label: "Archive", icon: Archive },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/privacy", label: "Privacy", icon: ShieldCheck },
 ];

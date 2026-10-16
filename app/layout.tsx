@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { CsrfProvider } from "@/components/security/csrf";
 import { csrfToken } from "@/lib/security/csrf";
+import { currentTheme } from "@/lib/theme";
 import "./globals.css";
 
 // Fonts are downloaded at build time and served from this app, so no request
@@ -41,8 +42,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Every page renders per request so its scripts carry that request's CSP
   // nonce (set in proxy.ts).
   await connection();
+  const theme = await currentTheme();
   return (
-    <html lang="en" className={`${bricolage.variable} ${publicSans.variable}`}>
+    <html lang="en" data-theme={theme} className={`${bricolage.variable} ${publicSans.variable}`}>
       <body className="min-h-dvh antialiased">
         <a
           href="#main"

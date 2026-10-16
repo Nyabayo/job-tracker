@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lockoutSeconds, MAX_LOCK_SECONDS } from "@/lib/auth/lockout";
 import { generateToken, hashToken, isExpired } from "@/lib/auth/tokens";
 import { truncateIp } from "@/lib/ip";
-import { escapeHtml } from "@/lib/html";
+import { escapeHtml } from "@/lib/html/escape";
 import { buildCsp, isCrossSiteWrite } from "@/lib/security/headers";
 import { invalid, safeNextPath } from "@/lib/action-result";
 import { signUpSchema } from "@/lib/validation/auth";

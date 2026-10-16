@@ -26,12 +26,16 @@ have() { command -v "$1" >/dev/null 2>&1; }
 docker_ok() { have docker && docker info >/dev/null 2>&1; }
 
 # run_tool <name> <docker image> <args...>: native binary first, then Docker.
+# Images whose entrypoint is not the tool itself get the tool name prepended.
 run_tool() {
   local name="$1" image="$2"; shift 2
   if have "$name"; then
     "$name" "$@"
   elif docker_ok; then
-    docker run --rm -v "$PWD:/src" -w /src "$image" "$@"
+    case "$name" in
+      semgrep|hadolint) docker run --rm -v "$PWD:/src" -w /src "$image" "$name" "$@" ;;
+      *) docker run --rm -v "$PWD:/src" -w /src "$image" "$@" ;;
+    esac
   else
     echo "$name is not installed and Docker is not running. Install $name (see docs/SECURITY_PIPELINE.md)."
     return 127
