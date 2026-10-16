@@ -125,7 +125,7 @@ describe("B6, B9: filters and archive", () => {
 
   it("deleting a job removes it and its children", async () => {
     const { id } = await createJob(alice.id, job({ title: "Delete me", companyName: "Acme" }));
-    await addNote(alice.id, { jobId: id, content: "bye" });
+    await addNote(alice.id, { jobId: id, content: "bye", format: "text" });
     await deleteJob(alice.id, id);
     expect(await getJobDetail(alice.id, id)).toBeNull();
     expect(await asOwner("SELECT id FROM notes WHERE job_id = $1", [id])).toEqual([]);
@@ -133,11 +133,24 @@ describe("B6, B9: filters and archive", () => {
 });
 
 describe("D7 to D9, F1, G1: job details", () => {
+  it("D9: rich text notes keep formatting but lose scripts, handlers and bad links", async () => {
+    const { id } = await createJob(alice.id, job({ title: "Rich", companyName: "Acme" }));
+    await addNote(alice.id, {
+      jobId: id,
+      format: "html",
+      content: '<h2>Call</h2><p><strong>Ask</strong> <a href="javascript:alert(1)">x</a> <a href="https://acme.test" onclick="evil()">site</a></p><script>alert(1)</script><img src=x onerror=alert(1)>',
+    });
+    await expect(addNote(alice.id, { jobId: id, format: "html", content: "<p><br></p>" })).rejects.toThrow();
+    const d = await getJobDetail(alice.id, id);
+    expect(d?.notes).toHaveLength(1);
+    expect(d?.notes[0]?.contentHtml).toBe('<h2>Call</h2><p><strong>Ask</strong> <a>x</a> <a href="https://acme.test">site</a></p>');
+  });
+
   it("links, tags, notes, contacts and tasks attach to the job", async () => {
     const { id } = await createJob(alice.id, job({ title: "Full", companyName: "Acme" }));
     await addLink(alice.id, { jobId: id, label: "Careers", url: "https://acme.test/careers" });
     await setTags(alice.id, id, ["remote", "fintech"]);
-    await addNote(alice.id, { jobId: id, content: "Spoke to <b>HR</b>" });
+    await addNote(alice.id, { jobId: id, content: "Spoke to <b>HR</b>", format: "text" });
     await addContact(alice.id, { jobId: id, name: "Amina", relationship: "RECRUITER", role: null, company: null, email: "amina@acme.test", phone: null, linkedinUrl: null, notes: null, lastContactedAt: null });
     await addTask(alice.id, { jobId: id, title: "Interview", kind: "INTERVIEW", interviewType: "VIDEO", dueAt: new Date(Date.now() + 86_400_000), remindAt: null, notes: null });
     const d = await getJobDetail(alice.id, id);
@@ -163,7 +176,7 @@ describe("A5: another user's jobs are a 404 everywhere", () => {
       () => updateJob(alice.id, bobJob, job({ title: "pwned", companyName: "x" })),
       () => setArchived(alice.id, bobJob, true),
       () => deleteJob(alice.id, bobJob),
-      () => addNote(alice.id, { jobId: bobJob, content: "x" }),
+      () => addNote(alice.id, { jobId: bobJob, content: "x", format: "text" }),
       () => addLink(alice.id, { jobId: bobJob, label: "x", url: "https://x.test" }),
       () => setTags(alice.id, bobJob, ["x"]),
       () => removeTask(alice.id, bobTask),

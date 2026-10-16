@@ -182,7 +182,7 @@ export function Board({ stages, cards, sortable }: { stages: Stage[]; cards: Boa
                 toast({ message: r.message ?? "Done.", tone: r.ok ? "info" : "danger" });
               }),
           },
-          { label: "Edit", onClick: () => router.push(`/jobs/${card.id}?tab=tasks&followup=1`) },
+          { label: "Edit", onClick: () => router.push(`/board?job=${card.id}&tab=tasks&followup=1`, { scroll: false }) },
         ],
       });
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Bell, GripVertical, Star } from "lucide-react";
 import type { ComponentProps } from "react";
 import { label } from "@/lib/board/constants";
@@ -54,6 +55,7 @@ export function JobCard({
   dragging?: boolean;
 }) {
   const meta = [card.location, label(card.workType)].filter(Boolean).join(" · ");
+  const href = usePanelHref(card.id);
   return (
     <article
       className={cn(
@@ -67,7 +69,7 @@ export function JobCard({
           {initials(card.companyName)}
         </span>
         <div className="min-w-0 flex-1">
-          <Link href={`/jobs/${card.id}`} className="block break-words font-bold text-text hover:text-primary hover:underline">
+          <Link href={href} scroll={false} className="block break-words font-bold text-text hover:text-primary hover:underline">
             {card.title}
           </Link>
           <p className="truncate text-sm text-secondary">{card.companyName}</p>
@@ -95,4 +97,16 @@ export function JobCard({
       {moveMenu}
     </article>
   );
+}
+
+/** On the board, a card opens the side panel and keeps the filters. */
+function usePanelHref(jobId: string): string {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  if (pathname !== "/board") return `/jobs/${jobId}`;
+  const q = new URLSearchParams(params.toString());
+  q.delete("tab");
+  q.delete("followup");
+  q.set("job", jobId);
+  return `/board?${q.toString()}`;
 }

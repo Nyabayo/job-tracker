@@ -1,7 +1,9 @@
 import "server-only";
 import { withUser, type Tx } from "@/lib/db";
 import { recordMissingRow } from "@/lib/db/owned";
-import { textToHtml } from "@/lib/html/sanitize";
+import { htmlHasText, sanitizeRichHtml, textToHtml } from "@/lib/html/sanitize";
+
+export class EmptyNoteError extends Error {}
 import { findJob, NotFoundError, timeline } from "@/lib/board/service";
 import type { z } from "zod";
 import type { contactSchema, linkSchema, noteSchema, taskSchema } from "@/lib/validation/job";
@@ -62,7 +64,9 @@ export function setTags(userId: string, jobId: string, names: string[]) {
 export function addNote(userId: string, input: z.output<typeof noteSchema>) {
   return withUser(userId, async (tx) => {
     const job = await findJob(tx, userId, input.jobId);
-    await tx.note.create({ data: { userId, jobId: job.id, contentHtml: textToHtml(input.content) }, select: { id: true } });
+    const contentHtml = input.format === "html" ? sanitizeRichHtml(input.content) : textToHtml(input.content);
+    if (!htmlHasText(contentHtml)) throw new EmptyNoteError();
+    await tx.note.create({ data: { userId, jobId: job.id, contentHtml }, select: { id: true } });
     await timeline(tx, userId, job.id, "NOTE_ADDED");
     await touch(tx, job.id);
   });

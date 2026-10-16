@@ -16,15 +16,20 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Dashboard with response rate, applications per week and stage funnel (F1).
 - Follow-up nudge after 7 days in Applied (G2), theme and currency preferences, and JSON or CSV export with spreadsheet formula neutralising (L3).
 - Rich text in descriptions is reduced to an allow-list and rendered without `dangerouslySetInnerHTML`.
+- Sign in with Google or GitHub when their keys are set (A2). Accounts are never linked by matching email.
+- Optional two-factor login with an authenticator app and 10 single-use recovery codes (A4). Secrets are encrypted with AES-256-GCM, each code works once, and attempts are rate limited. It also applies to Google and GitHub sign-in.
+- ZIP export with all data and every uploaded file (A6).
+- Rich text notes with Tiptap, sanitised on the server with the same allow-list (D9).
+- Job details open in a side panel over the board on desktop and as a full-screen sheet on phones (section 5).
 
 #### Changed
 
 - Every security check now runs locally through `npm run security` and git hooks instead of GitHub Actions: Gitleaks, Semgrep (project rules plus the OWASP Top 10, Next.js, TypeScript and secrets packs), npm audit, OSV-Scanner, Hadolint, Trivy and an optional ZAP baseline.
 - New Semgrep rule blocks server-side `fetch` outside the SSRF guard.
 
-#### Not yet built
+#### Fixed
 
-- Google and GitHub sign-in (A2), TOTP two-factor (A4), the ZIP export of files and the desktop side panel for job details.
+- Danger buttons in the dark theme now meet the colour contrast minimum.
 
 ### Sprint 1: secure foundations
 

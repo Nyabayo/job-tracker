@@ -10,7 +10,7 @@ import {
   contactSchema, jobIdSchema, jobSchema, linkSchema, moveJobSchema, noteSchema, tagsSchema, taskIdSchema, taskSchema,
 } from "@/lib/validation/job";
 import { createJob, deleteJob, moveJob, NotFoundError, setArchived, updateJob, type MoveResult } from "@/lib/board/service";
-import { addContact, addLink, addNote, addTask, removeContact, removeLink, removeNote, removeTask, setTags, setTaskDone } from "@/lib/board/details";
+import { EmptyNoteError, addContact, addLink, addNote, addTask, removeContact, removeLink, removeNote, removeTask, setTags, setTaskDone } from "@/lib/board/details";
 import { deleteObjects } from "@/lib/storage";
 import { z } from "zod";
 import { takeToken } from "@/lib/rate-limit";
@@ -165,10 +165,16 @@ export async function addNoteAction(_prev: ActionResult | null, formData: FormDa
   if (!(await csrfValid(formData))) return CSRF_FAILED;
   const parsed = noteSchema.safeParse(formObject(formData));
   if (!parsed.success) return invalid(parsed.error);
-  return run(async () => {
+  try {
     await addNote(user.id, parsed.data);
-    refresh(parsed.data.jobId);
-  }, "Note added.");
+  } catch (err) {
+    if (err instanceof EmptyNoteError) return { ok: false, fieldErrors: { content: ["Write something first."] } };
+    if (err instanceof NotFoundError) return NOT_FOUND;
+    console.error("[jobs]", err);
+    return FAILED;
+  }
+  refresh(parsed.data.jobId);
+  return { ok: true, message: "Note added." };
 }
 
 export async function removeNoteAction(input: unknown): Promise<ActionResult> {

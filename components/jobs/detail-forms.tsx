@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select";
 import { TextareaField } from "@/components/ui/textarea";
 import { CONTACT_RELATIONSHIPS, INTERVIEW_TYPES, TASK_KINDS, label } from "@/lib/board/constants";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { addContactAction, addLinkAction, addNoteAction, addTaskAction, setTagsAction } from "@/app/(app)/jobs/actions";
 
 function F(props: React.ComponentProps<typeof Field> & { name: string }) {
@@ -85,7 +86,7 @@ export function AddContactForm({ jobId }: { jobId: string }) {
 }
 
 function NoteContent() {
-  return <TextareaField name="content" label="New note" required maxLength={20000} error={useFieldError("content")} placeholder="What happened, what to remember..." />;
+  return <RichTextEditor name="content" label="New note" error={useFieldError("content")} placeholder="What happened, what to remember..." />;
 }
 
 function ContactNotes() {

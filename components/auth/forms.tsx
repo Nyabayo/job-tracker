@@ -9,7 +9,9 @@ import { useServerForm } from "@/components/auth/use-server-form";
 import {
   forgotPasswordAction,
   loginAction,
+  oauthLoginAction,
   resendVerificationAction,
+  twoFactorLoginAction,
   resetPasswordAction,
   signUpAction,
   verifyEmailAction,
@@ -21,8 +23,13 @@ import {
   resendVerificationSchema,
   resetPasswordSchema,
   signUpSchema,
+  twoFactorSchema,
   verifyEmailSchema,
 } from "@/lib/validation/auth";
+import { useState, useTransition } from "react";
+import { useCsrfToken } from "@/components/security/csrf";
+import { CSRF_FIELD } from "@/lib/security/csrf-shared";
+import type { ActionResult } from "@/lib/action-result";
 
 function FormMessage({ result }: { result: { ok: boolean; message?: string } | null }) {
   if (!result?.message) return null;
@@ -160,6 +167,82 @@ export function ResendVerificationForm() {
       <Button type="submit" variant="secondary" block disabled={pending}>
         {pending ? "Sending..." : "Send a new link"}
       </Button>
+    </form>
+  );
+}
+
+const PROVIDER_LABEL = { google: "Google", github: "GitHub" } as const;
+
+/** A2: "Continue with Google / GitHub", shown only for configured providers. */
+export function OAuthButtons({ providers }: { providers: ("google" | "github")[] }) {
+  const csrf = useCsrfToken();
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<ActionResult | null>(null);
+  if (providers.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      <FormMessage result={result} />
+      {providers.map((provider) => (
+        <Button
+          key={provider}
+          variant="secondary"
+          block
+          size="lg"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const res = await oauthLoginAction({ provider, [CSRF_FIELD]: csrf });
+              if (res && !res.ok) setResult(res);
+            })
+          }
+        >
+          Continue with {PROVIDER_LABEL[provider]}
+        </Button>
+      ))}
+      <div className="flex items-center gap-3 text-sm text-secondary" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+    </div>
+  );
+}
+
+/** A4: second login step. */
+export function TwoFactorLoginForm() {
+  const [recovery, setRecovery] = useState(false);
+  const { form, onSubmit, pending, result } = useServerForm(twoFactorSchema, twoFactorLoginAction, { code: "" });
+  const { errors } = form.formState;
+  return (
+    <form method="post" onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      <CsrfInput />
+      <FormMessage result={result} />
+      {recovery ? (
+        <Field label="Recovery code" autoComplete="off" autoCapitalize="none" spellCheck={false} required error={errors.code?.message} {...form.register("code")} />
+      ) : (
+        <Field
+          label="6-digit code from your authenticator app"
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          maxLength={7}
+          required
+          error={errors.code?.message}
+          {...form.register("code")}
+        />
+      )}
+      <Button type="submit" block size="lg" disabled={pending}>
+        {pending ? "Checking..." : "Log in"}
+      </Button>
+      <button
+        type="button"
+        className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-primary underline underline-offset-2"
+        onClick={() => {
+          form.reset({ code: "" });
+          setRecovery((r) => !r);
+        }}
+      >
+        {recovery ? "Use a code from my app instead" : "Lost your phone? Use a recovery code"}
+      </button>
     </form>
   );
 }

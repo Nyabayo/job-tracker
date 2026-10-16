@@ -10,11 +10,16 @@ import { generateToken, hashToken, isExpired, PASSWORD_RESET_TTL_MS, VERIFY_EMAI
 import { endAllSessions, endSession, startSession } from "@/lib/auth/session";
 import { clearLoginFailures, loginLockRemaining, recordLoginFailure, takeIpToken, takeToken } from "@/lib/rate-limit";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
+import { signIn } from "@/lib/auth/config";
+import { clearTicket, issueTicket, readTicket, redeemSecondFactor, twoFactorEnabled } from "@/lib/auth/two-factor";
+import { oauthProviders } from "@/lib/env";
 import { invalid, safeNextPath, type ActionResult } from "@/lib/action-result";
 import { CSRF_FAILED, csrfValid } from "@/lib/security/csrf";
 import {
   forgotPasswordSchema,
   loginSchema,
+  oauthSchema,
+  twoFactorSchema,
   resendVerificationSchema,
   resetPasswordSchema,
   signUpSchema,
@@ -119,9 +124,54 @@ export async function loginAction(input: unknown, next?: unknown): Promise<Actio
   }
 
   await clearLoginFailures(email);
+  if (await twoFactorEnabled(live.id)) {
+    // A4: the password was right, but the session waits for the code.
+    await issueTicket({ userId: live.id, next: safeNextPath(next) });
+    redirect("/login/two-factor");
+  }
   await startSession(live.id);
   await audit({ event: "LOGIN_SUCCESS", userId: live.id });
   redirect(safeNextPath(next));
+}
+
+// ---------------------------------------------------------------------------
+// A4: second step of login
+// ---------------------------------------------------------------------------
+export async function twoFactorLoginAction(input: unknown): Promise<ActionResult> {
+  if (!(await csrfValid(input))) return CSRF_FAILED;
+  const parsed = twoFactorSchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+
+  const ticket = await readTicket();
+  if (!ticket) return { ok: false, message: "This login has timed out. Please log in again." };
+  if (!(await takeToken("twoFactorPerUser", ticket.userId))) return { ok: false, message: TOO_MANY };
+
+  const used = await redeemSecondFactor(ticket.userId, parsed.data.code);
+  if (!used) {
+    await audit({ event: "LOGIN_FAILED", userId: ticket.userId, detail: { step: "two-factor" } });
+    return { ok: false, fieldErrors: { code: ["That code isn't right. Check your app and try again."] } };
+  }
+
+  await clearTicket();
+  await startSession(ticket.userId);
+  await audit({ event: "LOGIN_SUCCESS", userId: ticket.userId, detail: { secondFactor: used } });
+  redirect(safeNextPath(ticket.next));
+}
+
+// ---------------------------------------------------------------------------
+// A2: Google and GitHub
+// ---------------------------------------------------------------------------
+export async function oauthLoginAction(input: unknown): Promise<ActionResult> {
+  if (!(await csrfValid(input))) return CSRF_FAILED;
+  const parsed = oauthSchema.safeParse(input);
+  if (!parsed.success || !oauthProviders().includes(parsed.data.provider)) {
+    return { ok: false, message: "That sign-in option isn't available." };
+  }
+  const { rawIp } = await clientInfo();
+  if (!(await takeIpToken("loginPerIp", rawIp))) return { ok: false, message: TOO_MANY };
+  // Redirects to the provider; Auth.js checks state and PKCE on the way back.
+  await signIn(parsed.data.provider, { redirectTo: "/board" });
+  return { ok: true };
 }
 
 export async function logoutAction(formData: FormData): Promise<void> {

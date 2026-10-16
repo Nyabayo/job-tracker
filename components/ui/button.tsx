@@ -13,7 +13,7 @@ export const buttonVariants = cva(
         primary: "bg-primary text-on-primary hover:bg-primary-hover",
         secondary: "border border-border bg-surface text-text hover:bg-ground",
         ghost: "text-text hover:bg-primary-soft",
-        danger: "bg-danger text-white hover:opacity-90",
+        danger: "bg-danger text-on-danger hover:opacity-90",
         accent: "bg-accent text-on-accent hover:opacity-90",
       },
       size: {

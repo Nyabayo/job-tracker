@@ -10,12 +10,20 @@ import { WelcomeGuide } from "@/components/board/welcome-guide";
 import { requireUser } from "@/lib/auth/session";
 import { loadBoard } from "@/lib/board/service";
 import { boardFilterSchema, firstParams } from "@/lib/validation/job";
+import { isUuid } from "@/lib/db/owned";
+import { JobDetail } from "@/components/jobs/job-detail";
+import { SidePanel } from "@/components/jobs/side-panel";
 
 export const metadata: Metadata = { title: "Board" };
 
 export default async function BoardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
-  const filters = boardFilterSchema.parse(firstParams(await searchParams));
+  const sp = await searchParams;
+  const filters = boardFilterSchema.parse(firstParams(sp));
+  const panelJob = typeof sp.job === "string" && isUuid(sp.job) ? sp.job : null;
+  const keep = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) if (typeof v === "string" && !["job", "tab", "followup"].includes(k)) keep.set(k, v);
+  const closeHref = keep.size ? `/board?${keep.toString()}` : "/board";
   const data = await loadBoard(user.id, filters);
   const filtered = Object.entries(filters).some(([k, v]) => v !== undefined && k !== "sort");
 
@@ -60,6 +68,16 @@ export default async function BoardPage({ searchParams }: { searchParams: Promis
       >
         <Plus aria-hidden="true" className="size-6" />
       </Link>
+      {panelJob ? (
+        <SidePanel label="Job details" closeHref={closeHref}>
+          <JobDetail
+            userId={user.id}
+            id={panelJob}
+            sp={sp}
+            view={{ kind: "panel", closeHref, baseHref: `${closeHref}${keep.size ? "&" : "?"}job=${panelJob}` }}
+          />
+        </SidePanel>
+      ) : null}
     </div>
   );
 }

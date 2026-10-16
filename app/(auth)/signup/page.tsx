@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
-import { SignUpForm } from "@/components/auth/forms";
+import { OAuthButtons, SignUpForm } from "@/components/auth/forms";
+import { oauthProviders } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign up" };
 
@@ -19,6 +20,7 @@ export default function SignUpPage() {
         </>
       }
     >
+      <OAuthButtons providers={oauthProviders()} />
       <SignUpForm />
     </AuthCard>
   );

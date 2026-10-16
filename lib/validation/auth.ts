@@ -37,6 +37,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Enter your password.").max(PASSWORD_MAX),
 });
 
+// A4: a 6-digit app code, or a recovery code such as "k7m2-qx9p-4h".
+export const twoFactorSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(1, "Enter the code from your authenticator app.")
+    .max(20, "That code is too long.")
+    .regex(/^[A-Za-z0-9 -]+$/, "Use the 6 digits from your app, or a recovery code."),
+});
+
+export const oauthSchema = z.object({ provider: z.enum(["google", "github"]) });
+
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 
 export const resendVerificationSchema = z.object({ email: emailSchema });
@@ -55,7 +67,9 @@ export const resetPasswordSchema = z
   });
 
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Enter your password.").max(PASSWORD_MAX),
+  // Accounts made with Google or GitHub have no password; the action decides.
+  password: z.string().max(PASSWORD_MAX).optional().or(z.literal("")),
+  code: z.string().trim().max(20).optional().or(z.literal("")),
   confirm: z.literal("DELETE", { error: 'Type DELETE in capital letters to confirm.' }),
 });
 

@@ -133,7 +133,7 @@ test.describe("Board and jobs", () => {
     await newUser(page, "details");
     const id = await addJob(page, "Nurse", "Clinic");
     await page.goto(`/jobs/${id}?tab=notes`);
-    await page.getByLabel("New note").fill('<img src=x onerror="window.pwned=1">Call back Monday');
+    await page.getByRole("textbox", { name: "New note" }).fill('<img src=x onerror="window.pwned=1">Call back Monday');
     await page.getByRole("button", { name: "Add note" }).click();
     await expect(page.getByText('<img src=x onerror="window.pwned=1">Call back Monday')).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { pwned?: number }).pwned)).toBeUndefined();
@@ -152,12 +152,40 @@ test.describe("Board and jobs", () => {
     await expect(page.getByText("Enter a full link that starts with https://")).toBeVisible();
   });
 
+  test("D9 + section 5: rich text notes, and the job opens in a side panel from the board", async ({ page }) => {
+    await newUser(page, "panel");
+    const id = await addJob(page, "Analyst", "Bank");
+    await page.goto(`/jobs/${id}?tab=notes`);
+    const editor = page.getByRole("textbox", { name: "New note" });
+    await editor.click();
+    await page.getByRole("button", { name: "Bold" }).click();
+    await page.keyboard.type("Salary");
+    await page.getByRole("button", { name: "Bold" }).click();
+    await page.keyboard.type(" is negotiable");
+    await page.getByRole("button", { name: "Add note" }).click();
+    await expect(page.locator("strong", { hasText: "Salary" })).toBeVisible();
+    await expect(editor).toHaveText("");
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/board");
+    await page.getByRole("link", { name: "Analyst" }).click();
+    await expect(page).toHaveURL(new RegExp(`/board\\?job=${id}$`));
+    const panel = page.getByRole("complementary", { name: "Job details" });
+    await expect(panel.getByRole("heading", { name: "Analyst" })).toBeVisible();
+    await panel.getByRole("link", { name: /^notes/i }).click();
+    await expect(panel.locator("strong", { hasText: "Salary" })).toBeVisible();
+    await expect(column(page, "Wishlist")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/board$/);
+    await expect(panel).toHaveCount(0);
+  });
+
   test("NFR: populated board and job page pass axe with no page scroll", async ({ page }) => {
     await newUser(page, "nfr-board");
     const id = await addJob(page, "Accessible Engineer with a very long job title that wraps", "A11y Co", "Interview");
     await addJob(page, "Second", "Other");
     for (const width of [320, 768, 1440, 2560]) {
-      for (const path of ["/board", `/jobs/${id}`, `/jobs/${id}?tab=tasks`, `/jobs/${id}?tab=documents`, "/dashboard"]) {
+      for (const path of ["/board", `/board?job=${id}`, `/jobs/${id}`, `/jobs/${id}?tab=tasks`, `/jobs/${id}?tab=documents`, "/dashboard"]) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(path);
         await page.waitForLoadState("networkidle");

@@ -70,7 +70,9 @@ export const tagsSchema = z.object({
 
 export const noteSchema = z.object({
   jobId: uuidField,
-  content: requiredText(20_000, "Write something first."),
+  content: requiredText(50_000, "Write something first."),
+  // "html" from the rich text editor; anything else is plain text.
+  format: z.enum(["html", "text"]).catch("text"),
 });
 
 const phone = z

@@ -1,5 +1,10 @@
 import "server-only";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { withUser } from "@/lib/db";
+import { env } from "@/lib/env";
+import { s3 } from "@/lib/storage";
+import { cleanFileName } from "@/lib/documents/filetype";
+import type { ZipEntry } from "@/lib/zip";
 
 // A6: everything we store about a user, in one JSON document, plus a jobs
 // CSV. Secrets (password hash, 2FA secret, recovery codes, session tokens)
@@ -60,4 +65,23 @@ export function jobsCsv(data: Awaited<ReturnType<typeof exportData>>): string {
     return columns.map((c) => csvCell(record[c])).join(",");
   });
   return [columns.join(","), ...rows].join("\r\n") + "\r\n";
+}
+
+/**
+ * A6: data.json, jobs.csv and every clean uploaded file, one at a time, for
+ * the ZIP export. Files still being scanned or flagged are left out.
+ */
+export async function* exportZipEntries(userId: string): AsyncGenerator<ZipEntry> {
+  const data = await exportData(userId);
+  yield { name: "data.json", data: Buffer.from(JSON.stringify(data, null, 2), "utf8") };
+  yield { name: "jobs.csv", data: Buffer.from(jobsCsv(data), "utf8") };
+
+  const files = await withUser(userId, (tx) =>
+    tx.document.findMany({ where: { scanStatus: "CLEAN" }, select: { id: true, originalName: true, storageKey: true }, orderBy: { createdAt: "asc" } }),
+  );
+  for (const file of files) {
+    const obj = await s3().send(new GetObjectCommand({ Bucket: env().S3_BUCKET, Key: file.storageKey }));
+    if (!obj.Body) continue;
+    yield { name: `files/${file.id.slice(0, 8)}-${cleanFileName(file.originalName)}`, data: await obj.Body.transformToByteArray() };
+  }
 }

@@ -26,6 +26,10 @@ The script creates `.env` with fresh random secrets (it never overwrites an exis
 
 For a public server (HTTPS, real email, backups) read [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
+### Sign in with Google or GitHub (optional)
+
+Email and password works out of the box. To add Google or GitHub buttons, create an OAuth app with the provider, set its callback URL to `<APP_URL>/api/auth/callback/google` or `<APP_URL>/api/auth/callback/github`, and put its keys in `.env` as `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` or `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`. Both are free. A button only shows when its keys are set.
+
 ## What's inside
 
 | Part | Tool |

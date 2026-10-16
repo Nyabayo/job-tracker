@@ -31,6 +31,12 @@ const envSchema = z.object({
   CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
   MAX_UPLOAD_MB: z.coerce.number().positive().max(100).default(10),
   TOTP_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, "TOTP_ENCRYPTION_KEY must be 64 hex characters"),
+  // A2: optional sign-in with Google and GitHub. A provider shows on the
+  // login page only when both its id and secret are set.
+  AUTH_GOOGLE_ID: z.string().optional(),
+  AUTH_GOOGLE_SECRET: z.string().optional(),
+  AUTH_GITHUB_ID: z.string().optional(),
+  AUTH_GITHUB_SECRET: z.string().optional(),
   RUN_JOBS: z.stringbool().default(true),
   // Only trust X-Forwarded-For when a reverse proxy you control sets it.
   TRUST_PROXY: z.stringbool().default(false),
@@ -51,4 +57,15 @@ export function env(): Env {
 
 export function isSecureUrl(): boolean {
   return env().APP_URL.startsWith("https://");
+}
+
+export type OAuthProvider = "google" | "github";
+
+/** The Google and GitHub sign-in options this instance has keys for. */
+export function oauthProviders(): OAuthProvider[] {
+  const e = env();
+  const list: OAuthProvider[] = [];
+  if (e.AUTH_GOOGLE_ID && e.AUTH_GOOGLE_SECRET) list.push("google");
+  if (e.AUTH_GITHUB_ID && e.AUTH_GITHUB_SECRET) list.push("github");
+  return list;
 }

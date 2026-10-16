@@ -138,8 +138,9 @@ model User {
   passwordHash    String?   @map("password_hash") // Argon2id, null for OAuth-only users
   name            String?
   image           String?
-  totpSecret      String?   @map("totp_secret") // AES-256-GCM encrypted (A4, Sprint 3)
+  totpSecret      String?   @map("totp_secret") // AES-256-GCM encrypted (A4)
   totpEnabled     Boolean   @default(false) @map("totp_enabled")
+  totpLastStep    Int?      @map("totp_last_step") // replay protection
   theme           Theme     @default(SYSTEM)
   timezone        String    @default("UTC")
   defaultCurrency String    @default("KES") @map("default_currency") @db.VarChar(3)

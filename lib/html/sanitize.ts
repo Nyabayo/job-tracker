@@ -31,3 +31,8 @@ export function textToHtml(text: string): string {
     .map((para) => `<p>${escapeHtml(para).replace(/\n/g, "<br>")}</p>`)
     .join("");
 }
+
+/** True when the HTML has visible text, not just empty tags. */
+export function htmlHasText(html: string): boolean {
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} }).trim().length > 0;
+}
