@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Full pipeline before anything leaves your machine: lint (with
+# eslint-plugin-security), types, unit tests and every security scan.
+set -euo pipefail
+npm run --silent verify

@@ -1,0 +1,121 @@
+# Job Tracker: one-command self-hosting (L5).
+#   ./scripts/selfhost.sh        creates .env with random secrets, then runs
+#   docker compose up -d --build
+# Open http://localhost:3000 (app) and http://localhost:8025 (Mailpit inbox).
+#
+# Only the app (3000) and Mailpit's web inbox (8025) are published, and only
+# on localhost. Put a TLS reverse proxy in front for a public site; see
+# docs/SELF_HOSTING.md.
+
+name: job-tracker
+
+x-app-env: &app-env
+  APP_URL: ${APP_URL:-http://localhost:3000}
+  AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+  DATABASE_URL: postgresql://jt_app:${JT_APP_PASSWORD:?}@postgres:5432/jobtracker
+  DATABASE_URL_AUTH: postgresql://jt_auth:${JT_AUTH_PASSWORD:?}@postgres:5432/jobtracker
+  SMTP_HOST: ${SMTP_HOST:-mailpit}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-Job Tracker <no-reply@jobtracker.local>}
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://storage:8333}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET: ${S3_BUCKET:-jobtracker}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+  S3_FORCE_PATH_STYLE: "true"
+  CLAMAV_HOST: clamav
+  CLAMAV_PORT: "3310"
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+  TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?set TOTP_ENCRYPTION_KEY in .env}
+  TRUST_PROXY: ${TRUST_PROXY:-false}
+  AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+  AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
+  AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
+  AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
+
+services:
+  postgres:
+    image: postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env}
+      JT_OWNER_PASSWORD: ${JT_OWNER_PASSWORD:?}
+      JT_APP_PASSWORD: ${JT_APP_PASSWORD:?}
+      JT_AUTH_PASSWORD: ${JT_AUTH_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+      - ./prisma/roles.sql:/docker-entrypoint-initdb.d/roles.sql.tpl:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jobtracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build: { context: ., target: migrate }
+    image: job-tracker-migrate:local
+    environment:
+      DATABASE_URL_OWNER: postgresql://jt_owner:${JT_OWNER_PASSWORD:?}@postgres:5432/jobtracker
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    build: { context: ., target: runner }
+    image: job-tracker:local
+    restart: unless-stopped
+    environment: *app-env
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage: { condition: service_healthy }
+      clamav: { condition: service_started }
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  # S3-compatible private file storage (SeaweedFS, Apache-2.0).
+  # MinIO stopped publishing community images in 2025, so SeaweedFS is the
+  # default; any S3-compatible service works via the S3_* settings.
+  storage:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    restart: unless-stopped
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-master.volumeSizeLimitMB=1024", "-volume.max=0"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?}
+    volumes:
+      - s3data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Virus scanning for every upload (used from Sprint 3).
+  clamav:
+    image: clamav/clamav:1.5.4@sha256:638d90201ee7ee6a82d249a2fc23b132e578673b5f1f2766852b127676ca1ef6
+    restart: unless-stopped
+    volumes:
+      - clamdb:/var/lib/clamav
+
+  # Catches all outgoing email for local use. For a real deployment set the
+  # SMTP_* values in .env to your mail provider and remove this service.
+  mailpit:
+    image: axllent/mailpit:v1.31.5@sha256:94f6b70c1436defae6799d9ac7ff0eeff9540465b842026d5cdb018f1c0234ea
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
+volumes:
+  pgdata:
+  s3data:
+  clamdb:

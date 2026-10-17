@@ -1,0 +1,4 @@
+# Gitleaks findings checked and accepted: dummy keys in a test that proves
+# real-looking secrets are required (tests/unit/security-hardening.test.ts).
+034e2d0a3f048cc668677a872ac0fc5628a8654d:tests/unit/security-hardening.test.ts:generic-api-key:30
+034e2d0a3f048cc668677a872ac0fc5628a8654d:tests/unit/security-hardening.test.ts:generic-api-key:31

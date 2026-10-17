@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   serverExternalPackages: ["@node-rs/argon2", "pg-boss"],
+  experimental: {
+    // E1: room for one upload at MAX_UPLOAD_MB (default 10 MB) plus form overhead.
+    serverActions: { bodySizeLimit: "12mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

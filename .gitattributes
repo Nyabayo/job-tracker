@@ -1,0 +1,8 @@
+# Shell scripts run inside Linux containers, so every text file keeps LF line
+# endings, even when cloned on Windows (core.autocrlf would add CR otherwise).
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary

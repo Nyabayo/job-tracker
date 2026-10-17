@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Fast checks on every commit: no secrets in the staged changes, and the
+# project security rules (CSRF, sign-in, SQL injection, XSS, cookies) pass.
+set -euo pipefail
+npm run --silent security:quick
