@@ -9,7 +9,19 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY scripts/install-hooks.mjs ./scripts/
-RUN npm ci --no-audit --no-fund && npx prisma generate
+# Slow or flaky connections: long timeouts, retries per package, and up to
+# three attempts. The npm cache mount keeps what was already downloaded, so a
+# rerun after a failure picks up where it stopped.
+ENV npm_config_fetch_retries=6 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=180000 \
+    npm_config_fetch_timeout=600000
+RUN --mount=type=cache,target=/root/.npm \
+    for attempt in 1 2 3; do \
+      npm ci --no-audit --no-fund --prefer-offline && break; \
+      [ "$attempt" = 3 ] && exit 1; \
+      echo "npm ci failed (attempt $attempt), retrying..."; sleep 10; \
+    done && npx prisma generate
 
 # ---- build -----------------------------------------------------------------
 FROM ${NODE_IMAGE} AS build
