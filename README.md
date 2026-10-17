@@ -19,6 +19,12 @@ cd job-tracker
 ./scripts/selfhost.sh
 ```
 
+On **Windows**, open Command Prompt or PowerShell in the folder and run this instead (no Git Bash needed):
+
+```bat
+scripts\selfhost.cmd
+```
+
 The script creates `.env` with fresh random secrets (it never overwrites an existing one) and starts everything. Then open:
 
 - **http://localhost:3000**: Job Tracker
